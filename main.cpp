@@ -9,6 +9,7 @@
 #include <fstream>
 #include <unordered_map>
 #include <list>
+#include <bitset>
 using namespace std;
 
 class Node {
@@ -102,8 +103,35 @@ int main(int argc, const char * argv[]) {
         cout << it->first << " " << it->second << endl;
     }
     
-    // save to a new file
+    // parse the input file and replace every character with its encoding
     ofstream compressed("compressed.dat");
-    if (compressed.is_open())
-        cout<<"yay";
+    fstream temp("temp.txt");
+    file.open("example.txt");
+    
+    while (file.get(ch)) {
+        temp << encodings[ch];
+    }
+    
+    int bitCount = 0;
+    string packet = "";
+    while (temp.get(ch)) {
+        bitCount++;
+        if (bitCount == 8) {
+            cout<<packet<<endl;
+            bitCount = 0;
+            bitset<8> byte (packet);
+            compressed << byte;
+            packet = "";
+        }
+        packet += ch;
+    }
+    cout << packet << endl;
+    bitset<8> byte (packet);
+    compressed << byte;
+    
+    compressed.close();
+    temp.close();
+    file.close();
+    
+    // add encoding info to binary file as well
 }
