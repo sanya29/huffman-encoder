@@ -103,20 +103,14 @@ int main(int argc, const char * argv[]) {
         cout << it->first << " " << it->second << endl;
     }
     
-    // add encoding info to binary file as well
-    
+    // add encoding info to binary file
     ofstream compressed("compressed.dat");
-    ofstream temp("temp2.txt");
+    ofstream temp("temp.txt");
     file.open("example.txt");
     
-    unsigned long lineCount = encodings.size();
-    cout << "line count: " << lineCount << endl;
     for (auto it = encodings.begin(); it != encodings.end(); it++) {
-//        temp << it->first << " " << it->second << endl;
         compressed << it->first << " " << it->second << endl;
     }
-//    unsigned long pos = temp.tellp();
-//    cout<<pos<<"ptr";
     
     // parse the input file and replace every character with its encoding
     while (file.get(ch)) {
@@ -124,7 +118,7 @@ int main(int argc, const char * argv[]) {
     }
     
     temp.close();
-    ifstream temp2("temp2.txt");
+    ifstream temp2("temp.txt");
     temp2.seekg(1,ios::beg);
     
     int bitCount = 0;
@@ -135,14 +129,18 @@ int main(int argc, const char * argv[]) {
             cout<<packet<<endl;
             bitCount = 0;
             bitset<8> byte (packet);
-            compressed << byte;
+            char grain;
+            grain = (char) byte.to_ulong();
+            compressed << grain;
             packet = "";
         }
         packet += ch;
     }
     cout << packet << endl;
     bitset<8> byte (packet);
-    compressed << byte;
+    char grain;
+    grain = (char) byte.to_ulong();
+    compressed << grain;
     
     
     // cleaning up
