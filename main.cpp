@@ -19,7 +19,6 @@ public:
     Node* getLeft() { return left; }
     Node* getRight() { return right; }
     char getChar() { return ch; }
-private:
     char ch;
     int freq;
     Node* left, *right;
@@ -38,6 +37,50 @@ void encode(Node* root, unordered_map<char, string>& encodings, string path = ""
     if (root->getLeft()) {
         encode(root->getLeft(), encodings, path + "0");
     }
+}
+
+void decode(Node* root, char ch, string path) {
+    if (!path.length()) {
+        return;
+    }
+    if (path[0] == '1') {
+        if (root->getRight()) {
+            decode(root->getRight(), ch, path.substr(1));
+        } else {
+            root->right = new Node(0);
+            if (path.length() == 1) {
+                root->ch = ch;
+                cout<<"\nsetting "<<ch;
+                return;
+            } else {
+                decode(root->getRight(), ch, path.substr(1));
+            }
+        }
+    } else if (path[0] == '0') {
+        if (root->getLeft()) {
+            decode(root->getLeft(), ch, path.substr(1));
+        } else {
+            root->left = new Node(0);
+            if (path.length() == 1) {
+                root->ch = ch;
+                cout<<"\nsetting "<<ch;
+                return;
+            } else {
+                decode(root->getLeft(), ch, path.substr(1));
+            }
+        }
+    } else {
+        cout<<"\nUMM\n";
+        exit(2020);
+    }
+}
+
+void preorder(Node* root) {
+    if (!root)
+        return;
+    cout << root->ch;
+    preorder(root->left);
+    preorder(root->right);
 }
 
 bool compare(Node*& a, Node*& b) {
@@ -59,7 +102,6 @@ int main(int argc, const char * argv[]) {
     
     char ch;
     while (file.get(ch)) {
-        cout << ch;
         freqMap[ch]++;
     }
     file.close();
@@ -97,19 +139,20 @@ int main(int argc, const char * argv[]) {
     
     auto ptr = nodes.begin();
     encode(*ptr, encodings);
+    preorder(*ptr);
     
     cout<<"Encodings:\n";
-    for (auto it = encodings.begin(); it != encodings.end(); it++) {
-        cout << it->first << " " << it->second << endl;
-    }
     
     // add encoding info to binary file
-    ofstream compressed("compressed.dat");
+    ofstream compressed("compressed.dat"); // ios::binary
     ofstream temp("temp.txt");
     file.open("example.txt");
     
-    for (auto it = encodings.begin(); it != encodings.end(); it++) {
+    int numEncodings = 1;
+    for (auto it = encodings.begin(); it != encodings.end(); it++, numEncodings++) {
         compressed << it->first << " " << it->second << endl;
+//        compressed.write((char*)& (it->first), 1);
+//        compressed.write((char*)& (it->second), sizeof(it->second));
     }
     
     // parse the input file and replace every character with its encoding
@@ -118,20 +161,24 @@ int main(int argc, const char * argv[]) {
     }
     
     temp.close();
+    compressed.close();
     ifstream temp2("temp.txt");
+    ofstream compressed2("compressed.dat", ios::app);
     temp2.seekg(1,ios::beg);
     
     int bitCount = 0;
     string packet = "";
     while (temp2.get(ch)) {
         bitCount++;
+        cout<<ch;
         if (bitCount == 8) {
-            cout<<packet<<endl;
+//            cout<<packet<<endl;
             bitCount = 0;
             bitset<8> byte (packet);
             char grain;
             grain = (char) byte.to_ulong();
-            compressed << grain;
+            compressed2 << grain;
+//            compressed.write((char*)& grain, 1);
             packet = "";
         }
         packet += ch;
@@ -140,11 +187,50 @@ int main(int argc, const char * argv[]) {
     bitset<8> byte (packet);
     char grain;
     grain = (char) byte.to_ulong();
-    compressed << grain;
+    compressed2 << grain;
+    compressed2.close();
+//    compressed.write((char*)& grain, sizeof(char));
     
+//    DECODE
+    
+    ifstream decoder("compressed.dat");
+    
+    unordered_map<char, string> decodings;
+    
+    cout << endl << numEncodings;
+    int getEncodes = 1;
+    string line;
+    while (getEncodes < numEncodings) {
+        getline(decoder, line);
+        if (line.length() == 0) {
+            cout << "hi\n";
+            getline(decoder, line);
+            cout << "char: \\n rest: " << line.substr(1) << endl;
+            getEncodes++;
+            decodings['\n'] = line.substr(1);
+        } else {
+            cout << "line: "<<line << " char: "<<line[0]<<" rest: "<<line.substr(2)<<endl;
+            decodings[line[0]] = line.substr(2);
+        }
+        getEncodes++;
+    }
+    
+    cout << "Decoding: \n";
+    for (auto it = decodings.begin(); it != decodings.end(); it++) {
+        cout << it->first << " " << it->second << endl;
+    }
+    
+    // recreate a huffman tree
+    
+    Node* root = new Node(0);
+    for (auto it = decodings.begin(); it != decodings.end(); it++) {
+        decode(root, it->first, it->second);
+    }
+    cout<<"\npreorder traversal\n";
+    preorder(root);
     
     // cleaning up
-    compressed.close();
+    decoder.close();
     temp.close();
     file.close();
 
